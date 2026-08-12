@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RbxGen — Exploit Script Engine</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow-x:hidden;background:#07070d;color:#d0c8c0;font-family:'Inter','Segoe UI',system-ui,sans-serif;-webkit-text-size-adjust:100%}
+#app{display:flex;flex-direction:column;height:100vh;width:100%;overflow:hidden}
+
+/* HEADER */
+#header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#0d0a06;border-bottom:1px solid #2a1a0a;flex-shrink:0}
+#logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#c23616);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 0 16px rgba(255,107,53,0.4)}
+#header-title{font-size:13px;font-weight:800;color:#ff8040}
+#header-sub{font-size:9px;color:#664422;font-weight:600}
+#hist-toggle{margin-left:auto;background:transparent;border:1px solid #2a1a0a;color:#664422;padding:5px 12px;border-radius:6px;font-size:10px;font-family:inherit;cursor:pointer;font-weight:700;flex-shrink:0;transition:all 0.15s}
+#hist-toggle:hover{border-color:#ff6b35;color:#ff8040}
+#hist-toggle.active{border-color:#ff6b35;color:#ff8040;background:#1a0e06}
+
+/* HISTORY DRAWER */
+#hist-drawer{position:fixed;top:0;left:0;height:100%;width:280px;background:#0a0808;border-right:1px solid #2a1a0a;z-index:200;transform:translateX(-100%);transition:transform 0.25s ease;display:flex;flex-direction:column;overflow:hidden}
+#hist-drawer.open{transform:translateX(0)}
+#hist-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:199;display:none}
+#hist-overlay.show{display:block}
+#hist-header{padding:14px 16px;background:#0d0a06;border-bottom:1px solid #2a1a0a;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#hist-title-lbl{font-size:12px;font-weight:800;color:#ff8040}
+#hist-close{background:transparent;border:none;color:#664422;font-size:18px;cursor:pointer;line-height:1}
+#hist-new{width:calc(100% - 24px);margin:12px;padding:9px;background:linear-gradient(135deg,#ff6b35,#c23616);border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;font-family:inherit;cursor:pointer}
+#hist-scroll{flex:1;overflow-y:auto;padding:0 12px 12px}
+.hist-conv{padding:10px 12px;border:1px solid #1e1208;border-radius:8px;cursor:pointer;margin-bottom:6px;background:#0e0a06;transition:all 0.15s}
+.hist-conv:hover{border-color:#664422}
+.hist-conv.active-conv{border-color:#ff6b35;background:#140c06}
+.hist-conv-title{font-size:11px;color:#886644;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-conv-preview{font-size:9px;color:#442810;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-conv-time{font-size:9px;color:#331a08;margin-top:2px}
+#hist-empty{text-align:center;color:#331a08;font-size:11px;padding:30px 0}
+
+/* MAIN */
+#main{display:flex;flex:1;overflow:hidden;width:100%}
+
+/* SIDEBAR */
+#sidebar{width:210px;flex-shrink:0;border-right:1px solid #1a1008;background:#09090f;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:5px}
+.sec-lbl{font-size:9px;font-weight:800;color:#442810;letter-spacing:0.12em;text-transform:uppercase;margin:4px 0 2px}
+.qbtn{width:100%;padding:7px 9px;background:#0e0a06;border:1px solid #1e1208;color:#886644;border-radius:8px;cursor:pointer;font-size:10px;font-family:inherit;text-align:left;transition:all 0.15s;line-height:1.4}
+.qbtn:hover{border-color:#ff6b35;color:#ff8040}
+
+/* RIGHT */
+#right{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* THINK */
+#think-wrap{display:none;flex-direction:column;border-bottom:1px solid #1a1008;flex-shrink:0;max-height:140px}
+#think-wrap.show{display:flex}
+#think-hdr{padding:5px 14px;background:#0d0a06;display:flex;align-items:center;gap:5px;flex-shrink:0}
+#think-lbl{font-size:10px;font-weight:700;color:#ff8040}
+.tdot{width:4px;height:4px;border-radius:50%;background:#ff6b35;animation:tp 1s ease-in-out infinite}
+.tdot:nth-child(3){animation-delay:0.2s}.tdot:nth-child(4){animation-delay:0.4s}
+@keyframes tp{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}
+#think-body{flex:1;overflow-y:auto;padding:8px 14px;font-size:10px;font-family:'Courier New',monospace;color:#664422;line-height:1.5;white-space:pre-wrap}
+
+/* OUTPUT */
+#out-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#out-toolbar{display:flex;align-items:center;gap:6px;padding:7px 14px;background:#0d0a06;border-bottom:1px solid #1a1008;flex-shrink:0}
+#out-title{font-size:9px;font-weight:800;color:#442810;letter-spacing:0.1em;flex:1}
+.tbtn{padding:4px 10px;background:transparent;border:1px solid #2a1a0a;color:#664422;border-radius:5px;cursor:pointer;font-size:10px;font-family:inherit;font-weight:700;transition:all 0.15s}
+.tbtn:hover{border-color:#ff6b35;color:#ff8040}
+.tbtn.ok{border-color:#4caf50;color:#4caf50}
+#out-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px}
+#out-content{min-height:100%}
+
+/* MESSAGES */
+.msg-block{margin-bottom:16px}
+.msg-user-row{display:flex;justify-content:flex-end;margin-bottom:8px}
+.msg-user-bub{max-width:78%;background:linear-gradient(135deg,#1e2a3f,#0d1a2a);border:1px solid #1e3a5a;border-radius:12px 4px 12px 12px;padding:9px 13px;font-size:12px;color:#8ab0d0;line-height:1.6;word-break:break-word}
+.msg-ai-lbl{font-size:9px;font-weight:800;color:#442810;letter-spacing:0.1em;margin-bottom:4px}
+.msg-text{font-size:12px;color:#a09080;line-height:1.7;white-space:pre-wrap;margin-bottom:3px}
+.code-wrap{background:#05050a;border:1px solid #2a1a0a;border-radius:8px;overflow:hidden;margin:8px 0}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:5px 12px;background:#0d0a06;border-bottom:1px solid #1a1008}
+.code-lang{font-size:9px;font-weight:800;color:#ff6b35;letter-spacing:0.1em;font-family:monospace}
+.code-copy{background:#140c06;border:1px solid #2a1a0a;color:#664422;padding:2px 9px;border-radius:4px;cursor:pointer;font-size:10px;font-family:inherit;transition:all 0.2s;user-select:none}
+.code-copy.ok{border-color:#4caf50;color:#4caf50;background:#0a1a0a}
+.code-ta{display:block;width:100%;min-height:60px;max-height:360px;resize:vertical;background:#05050a;border:none;outline:none;color:#c8c0a0;font-family:'Courier New',monospace;font-size:11px;line-height:1.6;padding:12px 14px;tab-size:4;white-space:pre;word-wrap:normal;overflow-wrap:normal;overflow:auto}
+
+/* PLACEHOLDER */
+#placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;opacity:0.35;pointer-events:none;padding:20px}
+#ph-icon{font-size:40px}
+#ph-text{font-size:12px;color:#664422;text-align:center;line-height:1.7}
+
+/* LOADING */
+#loading-row{display:none;align-items:flex-start;gap:8px;padding:0 14px 14px}
+#loading-row.show{display:flex}
+#loading-av{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,#ff6b35,#c23616);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:#fff;flex-shrink:0}
+#loading-bub{background:#0d0a06;border:1px solid #1a1008;border-radius:4px 12px 12px 12px;padding:10px 14px;display:flex;gap:5px;align-items:center;font-size:11px;color:#664422}
+.ldot{width:5px;height:5px;border-radius:50%;background:#ff6b35;animation:tp 1.2s ease-in-out infinite}
+.ldot:nth-child(2){animation-delay:0.2s}.ldot:nth-child(3){animation-delay:0.4s}
+
+/* INPUT — visible outline */
+#input-area{padding:10px 14px 14px;flex-shrink:0;background:#07070d;border-top:1px solid #2a1a0a}
+#input-row{display:flex;gap:8px;background:#100c08;border:2px solid #ff6b35;border-radius:12px;padding:10px 12px;align-items:flex-end;transition:border-color 0.2s}
+#input-row:focus-within{border-color:#ff8040;box-shadow:0 0 0 3px rgba(255,107,53,0.12)}
+#user-input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:#c8b090;font-size:12px;font-family:inherit;resize:none;line-height:1.6;max-height:120px;overflow-y:auto;padding:0}
+#user-input::placeholder{color:#442810}
+#send-btn{width:34px;height:34px;border-radius:8px;background:#2a1a0a;border:none;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#664422;font-size:16px;transition:all 0.2s;cursor:default}
+#send-btn.active{background:linear-gradient(135deg,#ff6b35,#c23616);color:#fff;cursor:pointer;box-shadow:0 0 12px rgba(255,107,53,0.4)}
+#input-hint{text-align:center;font-size:9px;color:#331a08;margin-top:5px}
+
+@media(max-width:560px){#sidebar{display:none}}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#07070d}
+::-webkit-scrollbar-thumb{background:#2a1a0a;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HISTORY OVERLAY -->
+  <div id="hist-overlay"></div>
+
+  <!-- HISTORY DRAWER -->
+  <div id="hist-drawer">
+    <div id="hist-header">
+      <span id="hist-title-lbl">💬 Conversations</span>
+      <button id="hist-close">×</button>
+    </div>
+    <button id="hist-new">+ New Conversation</button>
+    <div id="hist-scroll">
+      <div id="hist-list"></div>
+      <div id="hist-empty" style="display:none">No saved conversations yet.</div>
+    </div>
+  </div>
+
+  <!-- HEADER -->
+  <div id="header">
+    <div id="logo">⚡</div>
+    <div>
+      <div id="header-title">RbxGen</div>
+      <div id="header-sub">exploit script engine — all executors</div>
+    </div>
+    <button id="hist-toggle">☰ History</button>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="sidebar">
+      <div class="sec-lbl">Quick Scripts</div>
+      <button class="qbtn" data-q="Make me a universal ESP script with boxes, names and healthbars using the Drawing library. Works on all executors.">ESP — boxes, names, health</button>
+      <button class="qbtn" data-q="Make me an aimbot with FOV circle, smoothing and triggerbot. Universal, all executors.">Aimbot + FOV + triggerbot</button>
+      <button class="qbtn" data-q="Make me a combined speed hack, fly and noclip script with a GUI toggle for each. Mobile compatible.">Speed + fly + noclip GUI</button>
+      <button class="qbtn" data-q="Make me a RemoteEvent and RemoteFunction spy using hookmetamethod namecall hook that logs all remote calls to output.">Remote spy — namecall hook</button>
+      <button class="qbtn" data-q="Make me an infinite jump and anti gravity script using BodyVelocity. Universal.">Infinite jump + anti-gravity</button>
+      <button class="qbtn" data-q="Make me an auto farm script using fireclickdetector and fireproximityprompt with anti-idle loop. Universal.">Auto farm loop</button>
+      <button class="qbtn" data-q="Make me a walkspeed bypass using metatable __index hook with getrawmetatable and setreadonly.">Metatable walkspeed bypass</button>
+      <button class="qbtn" data-q="Make me a full draggable GUI library injected into CoreGui with toggle buttons, UICorner on everything, mobile touch and mouse support.">Full GUI library</button>
+      <button class="qbtn" data-q="Make me a FireServer argument spoofer that intercepts RemoteEvent arguments before they reach the server.">FireServer arg spoofer</button>
+      <button class="qbtn" data-q="Make me a debug upvalue scanner using debug.getupvalues to read LocalScript internals.">Debug upvalue scanner</button>
+      <button class="qbtn" data-q="Make me a kill aura using touched event and damage remote exploitation. Universal.">Kill aura</button>
+      <button class="qbtn" data-q="Make me a player teleport script with a GUI to input X Y Z coordinates. Mobile compatible.">Teleport + GUI</button>
+    </div>
+
+    <div id="right">
+      <div id="think-wrap">
+        <div id="think-hdr">
+          <span id="think-lbl">⚙ Planning</span>
+          <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+        </div>
+        <div id="think-body"></div>
+      </div>
+
+      <div id="out-area">
+        <div id="out-toolbar">
+          <span id="out-title">CHAT</span>
+          <button class="tbtn" id="copy-btn">Copy Script</button>
+          <button class="tbtn" id="clear-btn">Clear</button>
+        </div>
+        <div id="out-scroll">
+          <div id="out-content">
+            <div id="placeholder">
+              <div id="ph-icon">⚡</div>
+              <div id="ph-text">Hey — say hi, ask anything,<br>or describe the exploit script you need.<br><br>Use the sidebar for quick scripts.</div>
+            </div>
+          </div>
+        </div>
+        <div id="loading-row">
+          <div id="loading-av">R</div>
+          <div id="loading-bub">
+            <span id="loading-text">Thinking</span>
+            <div class="ldot"></div><div class="ldot"></div><div class="ldot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="input-area">
+        <div id="input-row">
+          <textarea id="user-input" rows="1" placeholder="Type here — ask anything or describe your script..."></textarea>
+          <button id="send-btn">↑</button>
+        </div>
+        <div id="input-hint">Enter to send · Shift+Enter for newline</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── HARDCODED KEY ──
+const GROQ_KEY = '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';
+
+const SYSTEM = `You are RbxGen, an expert Roblox exploit script assistant. You behave like a smart chat assistant — talk naturally first, understand context, then write scripts when ready.
+
+CONVERSATION RULES:
+- Greetings (hey, hi, hello, sup, yo, what's up): respond naturally and casually. Do NOT write scripts.
+- Vague one-word messages (beg, esp, fly, farm, script): ask what game and what they want. Do NOT assume and write immediately.
+- General questions: answer conversationally. No code unless asked.
+- Clear script requests with enough info: write the complete script.
+- Quick sidebar prompts: ALWAYS write the full script immediately — no questions.
+- Keep chat replies short. Only go long for actual code.
+- Max 1-2 clarifying questions. If they say generic or universal — write it.
+
+ENOUGH CONTEXT TO WRITE:
+- Game name + what it should do
+- They paste remote names or paths
+- They say generic / universal / just make it
+- Sidebar quick prompt (always write these)
+
+WHEN WRITING SCRIPTS:
+Executors: Synapse X, KRNL, Fluxus, Script-Ware, Celery, Delta, Ronix, Arceus X Neo
+Globals: fireclickdetector, fireproximityprompt, firetouchinterest, hookfunction, newcclosure, hookmetamethod, getnamecallmethod, getrawmetatable, setreadonly, getcallbackvalue, gethiddenproperty, sethiddenproperty, getrenv, getgenv, getsenv, getupvalues, setupvalue
+Drawing: Drawing.new(Square/Line/Text/Circle) + WorldToViewportPoint for ESP
+Movement: BodyVelocity, BodyGyro, VectorForce, LinearVelocity for fly/speed/noclip
+Hooks: hookmetamethod(__namecall) for remote spy, __index/__newindex metatable
+Debug: debug.getinfo, debug.getupvalue, debug.getprotos
+
+SCRIPT STRUCTURE (NEVER BREAK):
+1. Services at top
+2. Variables after services
+3. Helper functions before use
+4. Main logic after helpers
+5. Connections at bottom
+6. Zero blank lines inside code blocks
+7. 4 space indent throughout
+8. -- [SECTION NAME] comments on every block
+9. pcall every remote/HTTP/instance access
+10. local variables everywhere
+11. Mobile-compatible: Touch + MouseButton1 both handled
+12. GUI: UICorner on every frame min UDim.new(0,8), draggable panels, CoreGui with pcall fallback to PlayerGui
+13. Complete runnable scripts only — never partial or skeleton
+14. Triple backtick lua code blocks`;
+
+// ── STATE ──
+let loading = false;
+let chatHistory = [];
+let lastCode = '';
+let conversations = JSON.parse(localStorage.getItem('rbxgen_convs') || '[]');
+let currentConvId = null;
+
+// ── ELEMENTS ──
+const histDrawer = document.getElementById('hist-drawer');
+const histOverlay = document.getElementById('hist-overlay');
+const histToggle = document.getElementById('hist-toggle');
+const histClose = document.getElementById('hist-close');
+const histNew = document.getElementById('hist-new');
+const histList = document.getElementById('hist-list');
+const histEmpty = document.getElementById('hist-empty');
+const thinkWrap = document.getElementById('think-wrap');
+const thinkBody = document.getElementById('think-body');
+const thinkLbl = document.getElementById('think-lbl');
+const outScroll = document.getElementById('out-scroll');
+const outContent = document.getElementById('out-content');
+const loadingRow = document.getElementById('loading-row');
+const loadingText = document.getElementById('loading-text');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const copyBtn = document.getElementById('copy-btn');
+const clearBtn = document.getElementById('clear-btn');
+
+// ── HISTORY DRAWER ──
+function openDrawer() {
+  histDrawer.classList.add('open');
+  histOverlay.classList.add('show');
+  histToggle.classList.add('active');
+  renderConversations();
+}
+function closeDrawer() {
+  histDrawer.classList.remove('open');
+  histOverlay.classList.remove('show');
+  histToggle.classList.remove('active');
+}
+histToggle.onclick = () => histDrawer.classList.contains('open') ? closeDrawer() : openDrawer();
+histClose.onclick = closeDrawer;
+histOverlay.onclick = closeDrawer;
+
+// ── CONVERSATIONS ──
+function saveConversations() {
+  localStorage.setItem('rbxgen_convs', JSON.stringify(conversations));
+}
+
+function newConversation() {
+  // Save current if it has messages
+  if (chatHistory.length > 0 && currentConvId) {
+    const idx = conversations.findIndex(c => c.id === currentConvId);
+    if (idx >= 0) {
+      conversations[idx].messages = [...chatHistory];
+      conversations[idx].updatedAt = Date.now();
+      const firstUser = chatHistory.find(m => m.role === 'user');
+      if (firstUser) conversations[idx].title = firstUser.content.slice(0, 50);
+    }
+  }
+  // Create new
+  const id = Date.now().toString();
+  const conv = { id, title: 'New conversation', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
+  conversations.unshift(conv);
+  if (conversations.length > 30) conversations = conversations.slice(0, 30);
+  saveConversations();
+  currentConvId = id;
+  chatHistory = [];
+  lastCode = '';
+  outContent.innerHTML = '<div id="placeholder"><div id="ph-icon">⚡</div><div id="ph-text">Hey — say hi, ask anything,<br>or describe the exploit script you need.<br><br>Use the sidebar for quick scripts.</div></div>';
+  thinkWrap.classList.remove('show');
+  closeDrawer();
+}
+
+function loadConversation(conv) {
+  // Save current first
+  if (chatHistory.length > 0 && currentConvId) {
+    const idx = conversations.findIndex(c => c.id === currentConvId);
+    if (idx >= 0) {
+      conversations[idx].messages = [...chatHistory];
+      conversations[idx].updatedAt = Date.now();
+      const firstUser = chatHistory.find(m => m.role === 'user');
+      if (firstUser) conversations[idx].title = firstUser.content.slice(0, 50);
+    }
+    saveConversations();
+  }
+  currentConvId = conv.id;
+  chatHistory = [...(conv.messages || [])];
+  lastCode = '';
+  // Rebuild UI
+  outContent.innerHTML = '';
+  thinkWrap.classList.remove('show');
+  if (chatHistory.length === 0) {
+    outContent.innerHTML = '<div id="placeholder"><div id="ph-icon">⚡</div><div id="ph-text">Hey — say hi, ask anything,<br>or describe the exploit script you need.</div></div>';
+  } else {
+    // Replay messages
+    let i = 0;
+    while (i < chatHistory.length) {
+      const m = chatHistory[i];
+      if (m.role === 'user') {
+        addUserBubble(m.content, true);
+        i++;
+        if (i < chatHistory.length && chatHistory[i].role === 'assistant') {
+          addAIReply(chatHistory[i].content, true);
+          i++;
+        }
+      } else { i++; }
+    }
+  }
+  closeDrawer();
+  setTimeout(() => { outScroll.scrollTop = outScroll.scrollHeight; }, 50);
+}
+
+function renderConversations() {
+  if (conversations.length === 0) {
+    histList.innerHTML = '';
+    histEmpty.style.display = 'block';
+    return;
+  }
+  histEmpty.style.display = 'none';
+  histList.innerHTML = '';
+  conversations.forEach(conv => {
+    const el = document.createElement('div');
+    el.className = 'hist-conv' + (conv.id === currentConvId ? ' active-conv' : '');
+    const title = document.createElement('div');
+    title.className = 'hist-conv-title';
+    title.textContent = conv.title || 'Untitled';
+    const preview = document.createElement('div');
+    preview.className = 'hist-conv-preview';
+    const lastMsg = (conv.messages || []).filter(m => m.role === 'assistant').pop();
+    preview.textContent = lastMsg ? lastMsg.content.replace(/```[\s\S]*?```/g, '[script]').slice(0, 60) : 'No messages yet';
+    const time = document.createElement('div');
+    time.className = 'hist-conv-time';
+    const ago = Math.round((Date.now() - conv.updatedAt) / 60000);
+    time.textContent = ago < 1 ? 'just now' : ago < 60 ? ago + 'm ago' : ago < 1440 ? Math.round(ago/60) + 'h ago' : Math.round(ago/1440) + 'd ago';
+    el.appendChild(title); el.appendChild(preview); el.appendChild(time);
+    el.onclick = () => loadConversation(conv);
+    histList.appendChild(el);
+  });
+}
+
+histNew.onclick = newConversation;
+
+// ── INIT CONVERSATION ──
+function initConv() {
+  if (conversations.length > 0) {
+    currentConvId = conversations[0].id;
+    chatHistory = [...(conversations[0].messages || [])];
+  } else {
+    const id = Date.now().toString();
+    const conv = { id, title: 'New conversation', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
+    conversations.unshift(conv);
+    saveConversations();
+    currentConvId = id;
+    chatHistory = [];
+  }
+  // Replay if messages exist
+  if (chatHistory.length > 0) {
+    outContent.innerHTML = '';
+    let i = 0;
+    while (i < chatHistory.length) {
+      const m = chatHistory[i];
+      if (m.role === 'user') {
+        addUserBubble(m.content, true);
+        i++;
+        if (i < chatHistory.length && chatHistory[i].role === 'assistant') {
+          addAIReply(chatHistory[i].content, true);
+          i++;
+        }
+      } else { i++; }
+    }
+    setTimeout(() => { outScroll.scrollTop = outScroll.scrollHeight; }, 50);
+  }
+}
+
+// ── SAVE CURRENT CONV ──
+function saveCurrentConv() {
+  if (!currentConvId) return;
+  const idx = conversations.findIndex(c => c.id === currentConvId);
+  if (idx < 0) return;
+  conversations[idx].messages = [...chatHistory];
+  conversations[idx].updatedAt = Date.now();
+  const firstUser = chatHistory.find(m => m.role === 'user');
+  if (firstUser) conversations[idx].title = firstUser.content.slice(0, 50);
+  saveConversations();
+}
+
+// ── CLIPBOARD ──
+function copyText(text, btn) {
+  const done = () => {
+    if (!btn) return;
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copied';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('ok'); }, 2000);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fbCopy(text, done));
+  } else { fbCopy(text, done); }
+}
+function fbCopy(text, cb) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0';
+  document.body.appendChild(ta); ta.focus(); ta.select();
+  try { document.execCommand('copy'); } catch(e) {}
+  document.body.removeChild(ta); if (cb) cb();
+}
+
+// ── PARSE CODE BLOCKS ──
+function parseMsg(text) {
+  const parts = [];
+  const re = /```(?:lua|luau)?\n?([\s\S]*?)```/g;
+  let last = 0, m;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) parts.push({ type: 'text', val: text.slice(last, m.index) });
+    parts.push({ type: 'code', val: m[1].trimEnd() });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) parts.push({ type: 'text', val: text.slice(last) });
+  return parts;
+}
+
+// ── RENDER MESSAGES ──
+function addUserBubble(text, silent) {
+  const ph = document.getElementById('placeholder');
+  if (ph) ph.remove();
+  const row = document.createElement('div');
+  row.className = 'msg-user-row';
+  const bub = document.createElement('div');
+  bub.className = 'msg-user-bub';
+  bub.textContent = text;
+  row.appendChild(bub);
+  outContent.appendChild(row);
+  if (!silent) scrollBottom();
+}
+
+function addAIReply(text, silent) {
+  const block = document.createElement('div');
+  block.className = 'msg-block';
+  const lbl = document.createElement('div');
+  lbl.className = 'msg-ai-lbl';
+  lbl.textContent = '⚡ RBXGEN';
+  block.appendChild(lbl);
+  const parts = parseMsg(text);
+  parts.forEach(p => {
+    if (p.type === 'code') {
+      lastCode = p.val;
+      const wrap = document.createElement('div'); wrap.className = 'code-wrap';
+      const hdr = document.createElement('div'); hdr.className = 'code-hdr';
+      const lang = document.createElement('span'); lang.className = 'code-lang'; lang.textContent = 'LUA';
+      const cpBtn = document.createElement('button'); cpBtn.className = 'code-copy'; cpBtn.textContent = 'copy';
+      const ta = document.createElement('textarea'); ta.className = 'code-ta'; ta.value = p.val;
+      ta.readOnly = false; ta.spellcheck = false;
+      cpBtn.onclick = () => copyText(ta.value, cpBtn);
+      setTimeout(() => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 360) + 'px'; }, 0);
+      hdr.appendChild(lang); hdr.appendChild(cpBtn);
+      wrap.appendChild(hdr); wrap.appendChild(ta);
+      block.appendChild(wrap);
+    } else {
+      const d = document.createElement('div'); d.className = 'msg-text';
+      d.textContent = p.val.trim();
+      if (p.val.trim()) block.appendChild(d);
+    }
+  });
+  outContent.appendChild(block);
+  if (!silent) scrollBottom();
+}
+
+function scrollBottom() { outScroll.scrollTop = outScroll.scrollHeight; }
+
+// ── GROQ API ──
+async function callAPI(messages, maxTokens) {
+  const body = JSON.stringify({
+    model: 'llama-3.3-70b-versatile',
+    max_tokens: maxTokens || 2048,
+    messages,
+  });
+  const headers = { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + GROQ_KEY };
+
+  try {
+    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', { method: 'POST', headers, body });
+    const d = await r.json();
+    if (r.ok && d.choices) return d.choices[0].message.content;
+    if (d.error) throw new Error(d.error.message);
+  } catch(e) {
+    if (e.message && !e.message.toLowerCase().includes('fetch')) throw e;
+  }
+
+  try {
+    const r = await fetch('https://corsproxy.io/?' + encodeURIComponent('https://api.groq.com/openai/v1/chat/completions'), { method: 'POST', headers, body });
+    const d = await r.json();
+    if (r.ok && d.choices) return d.choices[0].message.content;
+    if (d.error) throw new Error(d.error.message);
+  } catch(e) {
+    if (e.message && !e.message.toLowerCase().includes('fetch')) throw e;
+  }
+
+  throw new Error('Connection failed. Host this file on GitHub Pages or Netlify for reliable access.');
+}
+
+// ── SEND ──
+function isQuickPrompt(text) { return text.length > 25 && /make me|all executor|universal|works on all/i.test(text); }
+function isScriptReq(text) { return /\b(write|make|create|build|generate|give me|i need|can you (make|write|create|build)|script for)\b/i.test(text); }
+
+async function send(text) {
+  const msg = (text !== undefined ? text : userInput.value).trim();
+  if (!msg || loading) return;
+
+  addUserBubble(msg);
+  if (text === undefined) { userInput.value = ''; userInput.style.height = 'auto'; }
+  loading = true; updateBtn();
+  chatHistory.push({ role: 'user', content: msg });
+  if (chatHistory.length > 40) chatHistory.shift();
+
+  loadingRow.classList.add('show');
+  thinkWrap.classList.remove('show');
+  scrollBottom();
+
+  try {
+    let reply = '';
+    const quick = isQuickPrompt(msg);
+    const scriptReq = isScriptReq(msg) && chatHistory.filter(m => m.role === 'user').length > 1;
+
+    if (quick || scriptReq) {
+      // Two-pass
+      thinkBody.textContent = '';
+      thinkWrap.classList.add('show');
+      thinkLbl.textContent = '⚙ Planning...';
+      document.querySelectorAll('.tdot').forEach(d => d.style.display = '');
+      loadingText.textContent = 'Planning';
+
+      const planMsgs = [
+        { role: 'system', content: SYSTEM },
+        ...chatHistory.slice(0, -1),
+        { role: 'user', content: 'PLAN ONLY — numbered step by step plan, no code yet.\n\nRequest: ' + msg }
+      ];
+      const plan = await callAPI(planMsgs, 350);
+      thinkBody.textContent = plan;
+      thinkLbl.textContent = '⚙ Writing...';
+      loadingText.textContent = 'Generating';
+
+      const writeMsgs = [
+        { role: 'system', content: SYSTEM },
+        ...chatHistory.slice(0, -1),
+        { role: 'assistant', content: 'My plan:\n' + plan },
+        { role: 'user', content: 'Now write the complete fully runnable script. Request: ' + msg }
+      ];
+      reply = await callAPI(writeMsgs, 4096);
+      thinkLbl.textContent = '⚙ Plan';
+      document.querySelectorAll('.tdot').forEach(d => d.style.display = 'none');
+
+    } else {
+      loadingText.textContent = 'Thinking';
+      const convMsgs = [{ role: 'system', content: SYSTEM }, ...chatHistory];
+      reply = await callAPI(convMsgs, 600);
+    }
+
+    chatHistory.push({ role: 'assistant', content: reply });
+    if (chatHistory.length > 40) chatHistory.shift();
+    loadingRow.classList.remove('show');
+    addAIReply(reply);
+    saveCurrentConv();
+
+  } catch(err) {
+    thinkWrap.classList.remove('show');
+    loadingRow.classList.remove('show');
+    const b = document.createElement('div'); b.className = 'msg-block';
+    const t = document.createElement('div'); t.className = 'msg-text'; t.style.color = '#ff5555';
+    t.textContent = 'Error: ' + err.message;
+    b.appendChild(t); outContent.appendChild(b); scrollBottom();
+  }
+
+  loading = false; updateBtn();
+}
+
+function updateBtn() {
+  sendBtn.className = (userInput.value.trim().length > 0 && !loading) ? 'active' : '';
+}
+
+userInput.oninput = () => {
+  userInput.style.height = 'auto';
+  userInput.style.height = Math.min(userInput.scrollHeight, 120) + 'px';
+  updateBtn();
+};
+userInput.onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } };
+sendBtn.onclick = () => send();
+
+document.querySelectorAll('.qbtn').forEach(btn => {
+  btn.onclick = () => { if (!loading) send(btn.dataset.q); };
+});
+
+copyBtn.onclick = () => { if (lastCode) copyText(lastCode, copyBtn); };
+clearBtn.onclick = () => {
+  chatHistory = [];
+  lastCode = '';
+  outContent.innerHTML = '<div id="placeholder"><div id="ph-icon">⚡</div><div id="ph-text">Hey — say hi, ask anything,<br>or describe the exploit script you need.</div></div>';
+  thinkWrap.classList.remove('show');
+  document.querySelectorAll('.tdot').forEach(d => d.style.display = '');
+  // Create new conversation
+  const id = Date.now().toString();
+  const conv = { id, title: 'New conversation', messages: [], createdAt: Date.now(), updatedAt: Date.now() };
+  conversations.unshift(conv);
+  if (conversations.length > 30) conversations = conversations.slice(0, 30);
+  saveConversations();
+  currentConvId = id;
+};
+
+// ── INIT ──
+initConv();
+</script>
+</body>
+</html>
