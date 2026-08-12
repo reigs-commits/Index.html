@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>RbxGen — Exploit Script Engine</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;width:100%;overflow-x:hidden;background:#0e0b09;color:#e8ddd0;font-family:'Inter','Segoe UI',system-ui,sans-serif;-webkit-text-size-adjust:100%}
+#app{display:flex;flex-direction:column;height:100vh;width:100%;overflow:hidden}
+
+/* HEADER */
+#header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#160f08;border-bottom:2px solid #ff6b35;flex-shrink:0}
+#logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#ff6b35,#c23616);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 0 16px rgba(255,107,53,0.5)}
+#header-title{font-size:14px;font-weight:800;color:#ff8040}
+#header-sub{font-size:9px;color:#886644;font-weight:600}
+#hist-toggle{margin-left:auto;background:#1e1208;border:1px solid #ff6b35;color:#ff8040;padding:6px 14px;border-radius:6px;font-size:10px;font-family:inherit;cursor:pointer;font-weight:700;flex-shrink:0;transition:all 0.15s}
+#hist-toggle:hover,#hist-toggle.active{background:#2a1608;color:#ffaa60}
+
+/* HISTORY DRAWER */
+#hist-drawer{position:fixed;top:0;left:0;height:100%;width:290px;background:#120d08;border-right:2px solid #ff6b35;z-index:200;transform:translateX(-100%);transition:transform 0.25s ease;display:flex;flex-direction:column;overflow:hidden}
+#hist-drawer.open{transform:translateX(0)}
+#hist-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:199;display:none}
+#hist-overlay.show{display:block}
+#hist-header{padding:14px 16px;background:#160f08;border-bottom:1px solid #3a2010;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+#hist-title-lbl{font-size:13px;font-weight:800;color:#ff8040}
+#hist-close{background:transparent;border:none;color:#886644;font-size:20px;cursor:pointer;line-height:1;padding:2px 6px}
+#hist-close:hover{color:#ff8040}
+#hist-new{width:calc(100% - 24px);margin:12px;padding:10px;background:linear-gradient(135deg,#ff6b35,#c23616);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;font-family:inherit;cursor:pointer;box-shadow:0 2px 10px rgba(255,107,53,0.3)}
+#hist-scroll{flex:1;overflow-y:auto;padding:0 12px 12px}
+.hist-conv{padding:10px 12px;border:1px solid #2a1a0a;border-radius:8px;cursor:pointer;margin-bottom:6px;background:#160f08;transition:all 0.15s}
+.hist-conv:hover{border-color:#886644;background:#1e1208}
+.hist-conv.active-conv{border-color:#ff6b35;background:#1e1208}
+.hist-conv-title{font-size:11px;color:#d4a870;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-conv-preview{font-size:9px;color:#664422;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-conv-time{font-size:9px;color:#3a2010;margin-top:2px}
+#hist-empty{text-align:center;color:#664422;font-size:11px;padding:30px 0}
+
+/* MAIN */
+#main{display:flex;flex:1;overflow:hidden;width:100%}
+
+/* SIDEBAR */
+#sidebar{width:210px;flex-shrink:0;border-right:1px solid #2a1a0a;background:#100d08;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:5px}
+.sec-lbl{font-size:9px;font-weight:800;color:#664422;letter-spacing:0.12em;text-transform:uppercase;margin:4px 0 2px}
+.qbtn{width:100%;padding:8px 10px;background:#160f08;border:1px solid #2a1a0a;color:#c4884a;border-radius:8px;cursor:pointer;font-size:10px;font-family:inherit;text-align:left;transition:all 0.15s;line-height:1.4}
+.qbtn:hover{border-color:#ff6b35;color:#ff8040;background:#1e1208}
+
+/* RIGHT */
+#right{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* THINK */
+#think-wrap{display:none;flex-direction:column;border-bottom:2px solid #3a2010;flex-shrink:0;max-height:160px}
+#think-wrap.show{display:flex}
+#think-hdr{padding:6px 14px;background:#160f08;display:flex;align-items:center;gap:5px;flex-shrink:0;border-bottom:1px solid #2a1a0a}
+#think-lbl{font-size:11px;font-weight:700;color:#ff8040}
+.tdot{width:5px;height:5px;border-radius:50%;background:#ff6b35;animation:tp 1s ease-in-out infinite}
+.tdot:nth-child(3){animation-delay:0.2s}.tdot:nth-child(4){animation-delay:0.4s}
+@keyframes tp{0%,100%{opacity:0.3;transform:scale(0.8)}50%{opacity:1;transform:scale(1.1)}}
+#think-body{flex:1;overflow-y:auto;padding:10px 14px;font-size:11px;font-family:'Courier New',monospace;color:#cc8844;line-height:1.6;white-space:pre-wrap;background:#0e0b09}
+
+/* OUTPUT */
+#out-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#out-toolbar{display:flex;align-items:center;gap:6px;padding:8px 14px;background:#160f08;border-bottom:1px solid #2a1a0a;flex-shrink:0}
+#out-title{font-size:10px;font-weight:800;color:#ff8040;letter-spacing:0.08em;flex:1}
+.tbtn{padding:5px 12px;background:#1e1208;border:1px solid #3a2010;color:#cc8844;border-radius:6px;cursor:pointer;font-size:10px;font-family:inherit;font-weight:700;transition:all 0.15s}
+.tbtn:hover{border-color:#ff6b35;color:#ff8040}
+.tbtn.ok{border-color:#4caf50;color:#4caf50;background:#0a1a0a}
+#out-scroll{flex:1;overflow-y:auto;overflow-x:hidden;padding:14px}
+#out-content{min-height:100%}
+
+/* MESSAGES */
+.msg-block{margin-bottom:20px}
+.msg-user-row{display:flex;justify-content:flex-end;margin-bottom:10px}
+.msg-user-bub{max-width:78%;background:linear-gradient(135deg,#1e2a3f,#0d1a2a);border:1px solid #2a4a6a;border-radius:14px 4px 14px 14px;padding:10px 14px;font-size:12px;color:#90b8e0;line-height:1.65;word-break:break-word}
+.msg-ai-lbl{font-size:9px;font-weight:800;color:#ff6b35;letter-spacing:0.12em;margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.msg-text{font-size:12.5px;color:#d4c4a8;line-height:1.75;white-space:pre-wrap;margin-bottom:4px}
+/* Orange highlight on inline code */
+.msg-text code{color:#ff8040;background:#1e1208;padding:1px 5px;border-radius:4px;font-family:'Courier New',monospace;font-size:11px}
+
+/* CODE BLOCK */
+.code-wrap{background:#080608;border:1px solid #ff6b35;border-radius:10px;overflow:hidden;margin:10px 0;box-shadow:0 0 12px rgba(255,107,53,0.1)}
+.code-hdr{display:flex;align-items:center;justify-content:space-between;padding:7px 14px;background:#160f08;border-bottom:1px solid #3a2010}
+.code-lang{font-size:10px;font-weight:800;color:#ff6b35;letter-spacing:0.1em;font-family:monospace}
+.code-copy{background:#1e1208;border:1px solid #3a2010;color:#cc8844;padding:3px 10px;border-radius:5px;cursor:pointer;font-size:10px;font-family:inherit;transition:all 0.2s;user-select:none}
+.code-copy:hover{border-color:#ff6b35;color:#ff8040}
+.code-copy.ok{border-color:#4caf50;color:#4caf50;background:#0a1a0a}
+.code-ta{display:block;width:100%;min-height:80px;max-height:400px;resize:vertical;background:#080608;border:none;outline:none;color:#e8d8a0;font-family:'Courier New',monospace;font-size:11.5px;line-height:1.65;padding:14px 16px;tab-size:4;white-space:pre;word-wrap:normal;overflow-wrap:normal;overflow:auto}
+
+/* AI ACTION BUTTONS */
+.ai-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.ai-action-btn{padding:4px 10px;background:#1e1208;border:1px solid #3a2010;color:#cc8844;border-radius:20px;cursor:pointer;font-size:10px;font-family:inherit;font-weight:600;transition:all 0.15s;user-select:none}
+.ai-action-btn:hover{border-color:#ff6b35;color:#ff8040;background:#2a1608}
+.ai-action-btn.ok{border-color:#4caf50;color:#4caf50}
+
+/* PLACEHOLDER */
+#placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:12px;opacity:0.5;pointer-events:none;padding:20px}
+#ph-icon{font-size:48px}
+#ph-text{font-size:13px;color:#cc8844;text-align:center;line-height:1.8}
+
+/* LOADING */
+#loading-row{display:none;align-items:flex-start;gap:8px;padding:0 14px 14px}
+#loading-row.show{display:flex}
+#loading-av{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#ff6b35,#c23616);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:900;color:#fff;flex-shrink:0;box-shadow:0 0 10px rgba(255,107,53,0.4)}
+#loading-bub{background:#160f08;border:1px solid #2a1a0a;border-radius:4px 12px 12px 12px;padding:11px 16px;display:flex;gap:5px;align-items:center;font-size:11px;color:#886644}
+.ldot{width:6px;height:6px;border-radius:50%;background:#ff6b35;animation:tp 1.2s ease-in-out infinite}
+.ldot:nth-child(2){animation-delay:0.2s}.ldot:nth-child(3){animation-delay:0.4s}
+
+/* INPUT */
+#input-area{padding:10px 14px 14px;flex-shrink:0;background:#0e0b09;border-top:2px solid #ff6b35}
+#input-row{display:flex;gap:8px;background:#160f08;border:2px solid #ff6b35;border-radius:12px;padding:10px 12px;align-items:flex-end;transition:border-color 0.2s,box-shadow 0.2s}
+#input-row:focus-within{border-color:#ff8040;box-shadow:0 0 0 3px rgba(255,107,53,0.15)}
+#user-input{flex:1;min-width:0;background:transparent;border:none;outline:none;color:#e8c890;font-size:13px;font-family:inherit;resize:none;line-height:1.6;max-height:120px;overflow-y:auto;padding:0}
+#user-input::placeholder{color:#664422}
+#send-btn{width:36px;height:36px;border-radius:9px;background:#2a1608;border:1px solid #3a2010;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#664422;font-size:17px;transition:all 0.2s;cursor:default}
+#send-btn.active{background:linear-gradient(135deg,#ff6b35,#c23616);border-color:transparent;color:#fff;cursor:pointer;box-shadow:0 0 14px rgba(255,107,53,0.5)}
+#input-hint{text-align:center;font-size:9px;color:#3a2010;margin-top:5px}
+
+@media(max-width:580px){#sidebar{display:none}}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#0e0b09}
+::-webkit-scrollbar-thumb{background:#3a2010;border-radius:3px}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="hist-overlay"></div>
+  <div id="hist-drawer">
+    <div id="hist-header">
+      <span id="hist-title-lbl">💬 Conversations</span>
+      <button id="hist-close">×</button>
+    </div>
+    <button id="hist-new">+ New Conversation</button>
+    <div id="hist-scroll">
+      <div id="hist-list"></div>
+      <div id="hist-empty">No saved conversations yet.</div>
+    </div>
+  </div>
+
+  <div id="header">
+    <div id="logo">⚡</div>
+    <div>
+      <div id="header-title">RbxGen</div>
+      <div id="header-sub">exploit script engine — all executors</div>
+    </div>
+    <button id="hist-toggle">☰ History</button>
+  </div>
+
+  <div id="main">
+    <div id="sidebar">
+      <div class="sec-lbl">Quick Scripts</div>
+      <button class="qbtn" data-q="Make me a complete universal ESP script with boxes, names, healthbars and distance tracers using the Drawing library. Full working script for all executors.">ESP — boxes, names, health</button>
+      <button class="qbtn" data-q="Make me a complete aimbot with FOV circle, smoothing factor and triggerbot. Full working universal executor script.">Aimbot + FOV + triggerbot</button>
+      <button class="qbtn" data-q="Make me a complete combined speed hack, fly and noclip script with a dark GUI with toggle buttons for each feature. Mobile compatible touch and mouse.">Speed + fly + noclip GUI</button>
+      <button class="qbtn" data-q="Make me a complete RemoteEvent and RemoteFunction spy using hookmetamethod namecall hook that logs all remote calls with their arguments to output.">Remote spy — namecall hook</button>
+      <button class="qbtn" data-q="Make me a complete infinite jump and anti gravity script using BodyVelocity. Universal all executors.">Infinite jump + anti-gravity</button>
+      <button class="qbtn" data-q="Make me a complete auto farm script using fireclickdetector and fireproximityprompt in a loop with anti-idle and configurable delay. Universal.">Auto farm loop</button>
+      <button class="qbtn" data-q="Make me a complete walkspeed and jump power bypass using metatable __index hook with getrawmetatable and setreadonly. Full script.">Metatable bypass</button>
+      <button class="qbtn" data-q="Make me a complete draggable GUI library injected into CoreGui with toggle buttons, sliders, UICorner on everything, minimize button, mobile touch and mouse support.">Full GUI library</button>
+      <button class="qbtn" data-q="Make me a complete FireServer argument spoofer that hooks RemoteEvent FireServer and lets you modify arguments before they send.">FireServer arg spoofer</button>
+      <button class="qbtn" data-q="Make me a complete debug upvalue scanner using debug.getupvalues and debug.getupvalue to read and display LocalScript internals.">Debug upvalue scanner</button>
+      <button class="qbtn" data-q="Make me a complete kill aura using touched event and attempting to fire damage remotes. Universal executor script.">Kill aura</button>
+      <button class="qbtn" data-q="Make me a complete player teleport script with a dark GUI to input X Y Z coordinates and a list of players to teleport to. Mobile compatible.">Teleport + coordinate GUI</button>
+    </div>
+
+    <div id="right">
+      <div id="think-wrap">
+        <div id="think-hdr">
+          <span id="think-lbl">⚙ Planning script...</span>
+          <div class="tdot"></div><div class="tdot"></div><div class="tdot"></div>
+        </div>
+        <div id="think-body"></div>
+      </div>
+      <div id="out-area">
+        <div id="out-toolbar">
+          <span id="out-title">⚡ RBXGEN CHAT</span>
+          <button class="tbtn" id="copy-btn">Copy Script</button>
+          <button class="tbtn" id="clear-btn">Clear</button>
+        </div>
+        <div id="out-scroll">
+          <div id="out-content">
+            <div id="placeholder">
+              <div id="ph-icon">⚡</div>
+              <div id="ph-text">Say hi or ask anything.<br>Describe your script and I'll build it.<br>Use the sidebar for quick one-tap scripts.</div>
+            </div>
+          </div>
+        </div>
+        <div id="loading-row">
+          <div id="loading-av">R</div>
+          <div id="loading-bub">
+            <span id="loading-text">Thinking</span>
+            <div class="ldot"></div><div class="ldot"></div><div class="ldot"></div>
+          </div>
+        </div>
+      </div>
+      <div id="input-area">
+        <div id="input-row">
+          <textarea id="user-input" rows="1" placeholder="Type here — ask anything or describe your exploit script..."></textarea>
+          <button id="send-btn">↑</button>
+        </div>
+        <div id="input-hint">Enter to send · Shift+Enter for newline</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const GROQ_KEY = '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';
+
+const SYSTEM = `You are RbxGen, an elite Roblox exploit script engineer and assistant. You write production-quality, battle-tested exploit scripts that actually work.
+
+CONVERSATION BEHAVIOR:
+- Greetings (hey hi hello sup yo): respond naturally and briefly. No scripts.
+- Vague single words (esp fly farm beg gui): ask what game + what they want. Do NOT write immediately.
+- Questions: answer conversationally, no code unless asked.
+- Clear requests with context OR sidebar quick prompts: write the FULL complete script immediately.
+- If they say generic / universal / just make it: write it immediately.
+- Keep chat replies short. Only go long for actual code.
+
+SCRIPT QUALITY REQUIREMENTS — EVERY SCRIPT MUST MEET ALL OF THESE:
+1. COMPLETE — never partial, never skeleton, never "add your remote name here". Full runnable code only.
+2. LONG — real scripts are 100-400+ lines. Short scripts break. Write everything needed.
+3. ROBUST — pcall every single remote fire, HTTP call, and instance access. Handle errors gracefully.
+4. COMMENTED — every section has -- [SECTION NAME], every complex line has an inline comment.
+5. MOBILE-FIRST — Touch AND MouseButton1 handled everywhere. Buttons sized minimum 40px for tap targets.
+6. GUI STANDARDS — UICorner on every frame (UDim.new(0,8) minimum), UIStroke for borders, draggable via UIS, minimize/expand with TweenService, CoreGui parent with pcall fallback.
+7. PERFORMANCE — local variables everywhere, no globals, no deprecated wait(), use task.wait/task.spawn/task.delay, disconnect connections on cleanup.
+8. EXECUTOR COMPAT — works on Synapse X, KRNL, Fluxus, Script-Ware, Celery, Delta, Ronix, Arceus X Neo.
+
+EXPLOIT MASTERY:
+Globals: fireclickdetector(obj), fireproximityprompt(obj), firetouchinterest(part1,part2,0)
+Hooks: hookmetamethod(getrawmetatable(game),"__namecall",function(self,...)) for remote spy
+Metatable: getrawmetatable(obj), setreadonly(mt,false), rawset/rawget for bypass
+Memory: gethiddenproperty, sethiddenproperty, getproperties
+Env: getrenv(), getgenv(), getsenv(), getfenv(), getupvalues(), setupvalue()
+Debug: debug.getinfo, debug.getupvalue, debug.setupvalue, debug.getprotos
+Drawing: Drawing.new("Square"|"Circle"|"Line"|"Text") — Visible,Color,Thickness,Position,Size,Text,Font,Size properties
+ESP pattern: RenderStepped loop → WorldToViewportPoint → Drawing objects per player → cleanup on PlayerRemoving
+Aimbot: Camera:WorldToViewportPoint, CFrame.lookAt, lerp for smoothing, FOV check distance
+Movement: LinearVelocity or BodyVelocity+BodyGyro for fly, workspace.Gravity=0 for anti-grav
+Reanimation: Motor6D loop v.Parent=nil for Arceus X Neo Method 3
+
+STRUCTURE EVERY SCRIPT LIKE THIS:
+\`\`\`lua
+-- [SERVICES]
+-- all game:GetService() calls
+
+-- [CONFIG]  
+-- all user-configurable settings at top so they're easy to change
+
+-- [VARIABLES]
+-- all locals
+
+-- [FUNCTIONS]
+-- all helper functions
+
+-- [GUI] (if applicable)
+-- full GUI creation with UICorner on everything
+
+-- [MAIN LOGIC]
+-- core script logic
+
+-- [CONNECTIONS]
+-- all :Connect() calls, RunService connections
+
+-- [CLEANUP] (if applicable)
+-- disconnect function for when script unloads
+\`\`\`
+
+Always end scripts with a print statement confirming the script loaded successfully.
+Always use triple backtick lua code blocks.
+After the code block: one short paragraph explaining what the script does and how to use it.`;
+
+let loading = false;
+let chatHistory = [];
+let lastCode = '';
+let conversations = JSON.parse(localStorage.getItem('rbxgen_convs') || '[]');
+let currentConvId = null;
+
+// Elements
+const histDrawer = document.getElementById('hist-drawer');
+const histOverlay = document.getElementById('hist-overlay');
+const histToggle = document.getElementById('hist-toggle');
+const histClose = document.getElementById('hist-close');
+const histNew = document.getElementById('hist-new');
+const histList = document.getElementById('hist-list');
+const histEmpty = document.getElementById('hist-empty');
+const thinkWrap = document.getElementById('think-wrap');
+const thinkBody = document.getElementById('think-body');
+const thinkLbl = document.getElementById('think-lbl');
+const outScroll = document.getElementById('out-scroll');
+const outContent = document.getElementById('out-content');
+const loadingRow = document.getElementById('loading-row');
+const loadingText = document.getElementById('loading-text');
+const userInput = document.getElementById('user-input');
+const sendBtn = document.getElementById('send-btn');
+const copyBtn = document.getElementById('copy-btn');
+const clearBtn = document.getElementById('clear-btn');
+
+// Drawer
+function openDrawer(){ histDrawer.classList.add('open'); histOverlay.classList.add('show'); histToggle.classList.add('active'); renderConvs(); }
+function closeDrawer(){ histDrawer.classList.remove('open'); histOverlay.classList.remove('show'); histToggle.classList.remove('active'); }
+histToggle.onclick = () => histDrawer.classList.contains('open') ? closeDrawer() : openDrawer();
+histClose.onclick = closeDrawer;
+histOverlay.onclick = closeDrawer;
+
+// Conversations
+function saveConvs(){ localStorage.setItem('rbxgen_convs', JSON.stringify(conversations)); }
+
+function newConv(){
+  saveCurrentConv();
+  const id = Date.now().toString();
+  conversations.unshift({ id, title:'New conversation', messages:[], createdAt:Date.now(), updatedAt:Date.now() });
+  if(conversations.length > 30) conversations = conversations.slice(0,30);
+  saveConvs();
+  currentConvId = id;
+  chatHistory = []; lastCode = '';
+  outContent.innerHTML = '<div id="placeholder"><div id="ph-icon">⚡</div><div id="ph-text">Say hi or ask anything.<br>Describe your script and I\'ll build it.</div></div>';
+  thinkWrap.classList.remove('show');
+  closeDrawer();
+}
+
+function saveCurrentConv(){
+  if(!currentConvId || chatHistory.length === 0) return;
+  const idx = conversations.findIndex(c=>c.id===currentConvId);
+  if(idx<0) return;
+  conversations[idx].messages = [...chatHistory];
+  conversations[idx].updatedAt = Date.now();
+  const fu = chatHistory.find(m=>m.role==='user');
+  if(fu) conversations[idx].title = fu.content.slice(0,52);
+  saveConvs();
+}
+
+function loadConv(conv){
+  saveCurrentConv();
+  currentConvId = conv.id;
+  chatHistory = [...(conv.messages||[])];
+  lastCode = '';
+  outContent.innerHTML = '';
+  thinkWrap.classList.remove('show');
+  if(chatHistory.length===0){
+    outContent.innerHTML = '<div id="placeholder"><div id="ph-icon">⚡</div><div id="ph-text">Say hi or ask anything.</div></div>';
+  } else {
+    let i=0;
+    while(i<chatHistory.length){
+      const m=chatHistory[i];
+      if(m.role==='user'){ addUserBubble(m.content,true); i++;
+        if(i<chatHistory.length && chatHistory[i].role==='assistant'){ addAIReply(chatHistory[i].content,true); i++; }
+      } else i++;
+    }
+  }
+  closeDrawer();
+  setTimeout(()=>{ outScroll.scrollTop=outScroll.scrollHeight; },60);
+}
+
+function renderConvs(){
+  if(conversations.length===0){ histList.innerHTML=''; histEmpty.style.display='block'; return; }
+  histEmpty.style.display='none'; histList.innerHTML='';
+  conversations.forEach(conv=>{
+    const el=document.createElement('div'); el.className='hist-conv'+(conv.id===currentConvId?' active-conv':'');
+    const t=document.createElement('div'); t.className='hist-conv-title'; t.textContent=conv.title||'Untitled';
+    const p=document.createElement('div'); p.className='hist-conv-preview';
+    const lm=(conv.messages||[]).filter(m=>m.role==='assistant').pop();
+    p.textContent=lm?lm.content.replace(/```[\s\S]*?```/g,'[script]').slice(0,55):'Empty';
+    const d=document.createElement('div'); d.className='hist-conv-time';
+    const ago=Math.round((Date.now()-conv.updatedAt)/60000);
+    d.textContent=ago<1?'just now':ago<60?ago+'m ago':ago<1440?Math.round(ago/60)+'h ago':Math.round(ago/1440)+'d ago';
+    el.appendChild(t); el.appendChild(p); el.appendChild(d);
+    el.onclick=()=>loadConv(conv);
+    histList.appendChild(el);
+  });
+}
+
+histNew.onclick = newConv;
+
+function initConv(){
+  if(conversations.length>0){
+    currentConvId=conversations[0].id;
+    chatHistory=[...(conversations[0].messages||[])];
+    if(chatHistory.length>0){
+      outContent.innerHTML=''; let i=0;
+      while(i<chatHistory.length){
+        const m=chatHistory[i];
+        if(m.role==='user'){ addUserBubble(m.content,true); i++;
+          if(i<chatHistory.length && chatHistory[i].role==='assistant'){ addAIReply(chatHistory[i].content,true); i++; }
+        } else i++;
+      }
+      setTimeout(()=>{ outScroll.scrollTop=outScroll.scrollHeight; },60);
+    }
+  } else {
+    const id=Date.now().toString();
+    conversations.unshift({id,title:'New conversation',messages:[],createdAt:Date.now(),updatedAt:Date.now()});
+    saveConvs(); currentConvId=id; chatHistory=[];
+  }
+}
+
+// Clipboard
+function copyText(text, btn){
+  const done=()=>{ if(!btn)return; const o=btn.textContent; btn.textContent='✓ Copied'; btn.classList.add('ok'); setTimeout(()=>{ btn.textContent=o; btn.classList.remove('ok'); },2000); };
+  if(navigator.clipboard&&window.isSecureContext){ navigator.clipboard.writeText(text).then(done).catch(()=>fbCopy(text,done)); }
+  else fbCopy(text,done);
+}
+function fbCopy(text,cb){ const ta=document.createElement('textarea'); ta.value=text; ta.style.cssText='position:fixed;left:-9999px;top:-9999px;opacity:0'; document.body.appendChild(ta); ta.focus(); ta.select(); try{document.execCommand('copy');}catch(e){} document.body.removeChild(ta); if(cb)cb(); }
+
+// Parse response — highlights inline code with orange
+function renderText(text){
+  // Convert **bold** and `code` inline
+  return text.replace(/`([^`]+)`/g,'<code>$1</code>');
+}
+
+// Parse code blocks
+function parseMsg(text){
+  const parts=[]; const re=/```(?:lua|luau)?\n?([\s\S]*?)```/g; let last=0,m;
+  while((m=re.exec(text))!==null){
+    if(m.index>last) parts.push({type:'text',val:text.slice(last,m.index)});
+    parts.push({type:'code',val:m[1].trimEnd()});
+    last=m.index+m[0].length;
+  }
+  if(last<text.length) parts.push({type:'text',val:text.slice(last)});
+  return parts;
+}
+
+// Render user bubble
+function addUserBubble(text, silent){
+  const ph=document.getElementById('placeholder'); if(ph) ph.remove();
+  const row=document.createElement('div'); row.className='msg-user-row';
+  const bub=document.createElement('div'); bub.className='msg-user-bub'; bub.textContent=text;
+  row.appendChild(bub); outContent.appendChild(row);
+  if(!silent) scrollBottom();
+}
+
+// Render AI reply with action buttons
+function addAIReply(text, silent){
+  const block=document.createElement('div'); block.className='msg-block';
+  const lbl=document.createElement('div'); lbl.className='msg-ai-lbl'; lbl.textContent='⚡ RBXGEN';
+  block.appendChild(lbl);
+
+  const parts=parseMsg(text); let hasCodeBlock=false;
+  parts.forEach(p=>{
+    if(p.type==='code'){
+      hasCodeBlock=true; lastCode=p.val;
+      const wrap=document.createElement('div'); wrap.className='code-wrap';
+      const hdr=document.createElement('div'); hdr.className='code-hdr';
+      const lang=document.createElement('span'); lang.className='code-lang'; lang.textContent='LUA';
+      const cpBtn=document.createElement('button'); cpBtn.className='code-copy'; cpBtn.textContent='copy';
+      const ta=document.createElement('textarea'); ta.className='code-ta'; ta.value=p.val;
+      ta.readOnly=false; ta.spellcheck=false;
+      cpBtn.onclick=()=>copyText(ta.value,cpBtn);
+      setTimeout(()=>{ ta.style.height='auto'; ta.style.height=Math.min(ta.scrollHeight,400)+'px'; },0);
+      hdr.appendChild(lang); hdr.appendChild(cpBtn);
+      wrap.appendChild(hdr); wrap.appendChild(ta); block.appendChild(wrap);
+    } else {
+      const d=document.createElement('div'); d.className='msg-text';
+      d.innerHTML=renderText(p.val.trim());
+      if(p.val.trim()) block.appendChild(d);
+    }
+  });
+
+  // Action buttons below every AI message
+  const actions=document.createElement('div'); actions.className='ai-actions';
+
+  // Copy text button
+  const copyTxtBtn=document.createElement('button'); copyTxtBtn.className='ai-action-btn'; copyTxtBtn.textContent='📋 Copy text';
+  copyTxtBtn.onclick=()=>copyText(text.replace(/```[\s\S]*?```/g,'').trim(), copyTxtBtn);
+
+  // Copy script button (only if code block exists)
+  if(hasCodeBlock){
+    const copySBtn=document.createElement('button'); copySBtn.className='ai-action-btn'; copySBtn.textContent='⚡ Copy script';
+    copySBtn.onclick=()=>copyText(lastCode, copySBtn);
+    actions.appendChild(copySBtn);
+  }
+
+  // Select all button
+  const selBtn=document.createElement('button'); selBtn.className='ai-action-btn'; selBtn.textContent='✏️ Select all';
+  selBtn.onclick=()=>{
+    const range=document.createRange(); range.selectNodeContents(block);
+    const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    selBtn.textContent='✓ Selected'; selBtn.classList.add('ok');
+    setTimeout(()=>{ selBtn.textContent='✏️ Select all'; selBtn.classList.remove('ok'); },2000);
+  };
+
+  // Regenerate button
+  const regenBtn=document.createElement('button'); regenBtn.className='ai-action-btn'; regenBtn.textContent='🔄 Regenerate';
+  regenBtn.onclick=()=>{
+    const lastUser=chatHistory.filter(m=>m.role==='user').pop();
+    if(lastUser && !loading){ chatHistory=chatHistory.slice(0,-2); send(lastUser.content,true); }
+  };
+
+  actions.appendChild(copyTxtBtn); actions.appendChild(selBtn); actions.appendChild(regenBtn);
+  block.appendChild(actions);
+  outContent.appendChild(block);
+  if(!silent) scrollBottom();
+}
+
+function scrollBottom(){ outScroll.scrollTop=outScroll.scrollHeight; }
+
+// Groq API
+async function callAPI(messages, maxTokens){
+  const body=JSON.stringify({ model:'llama-3.3-70b-versatile', max_tokens:maxTokens||2048, messages });
+  const headers={'Content-Type':'application/json','Authorization':'Bearer '+GROQ_KEY};
+  try{
+    const r=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers,body});
+    const d=await r.json();
+    if(r.ok&&d.choices) return d.choices[0].message.content;
+    if(d.error) throw new Error(d.error.message);
+  }catch(e){ if(e.message&&!e.message.toLowerCase().includes('fetch')) throw e; }
+  try{
+    const r=await fetch('https://corsproxy.io/?'+encodeURIComponent('https://api.groq.com/openai/v1/chat/completions'),{method:'POST',headers,body});
+    const d=await r.json();
+    if(r.ok&&d.choices) return d.choices[0].message.content;
+    if(d.error) throw new Error(d.error.message);
+  }catch(e){ if(e.message&&!e.message.toLowerCase().includes('fetch')) throw e; }
+  throw new Error('Connection failed. Host on GitHub Pages or Netlify for reliable access.');
+}
+
+function isQuickPrompt(t){ return t.length>25&&/make me|all executor|universal|works on all|complete/i.test(t); }
+function isScriptReq(t){ return /\b(write|make|create|build|generate|give me|i need|can you (make|write|create|build)|script for)\b/i.test(t); }
+
+async function send(text, skipInput){
+  const msg=(text!==undefined?text:userInput.value).trim();
+  if(!msg||loading) return;
+  addUserBubble(msg);
+  if(!skipInput&&text===undefined){ userInput.value=''; userInput.style.height='auto'; }
+  loading=true; updateBtn();
+  chatHistory.push({role:'user',content:msg});
+  if(chatHistory.length>40) chatHistory.shift();
+  loadingRow.classList.add('show'); thinkWrap.classList.remove('show'); scrollBottom();
+
+  try{
+    let reply='';
+    const quick=isQuickPrompt(msg);
+    const scriptReq=isScriptReq(msg)&&chatHistory.filter(m=>m.role==='user').length>1;
+
+    if(quick||scriptReq){
+      // Two-pass: plan then write
+      thinkBody.textContent=''; thinkWrap.classList.add('show');
+      thinkLbl.textContent='⚙ Planning script structure...';
+      document.querySelectorAll('.tdot').forEach(d=>d.style.display='');
+      loadingText.textContent='Planning';
+
+      const planMsgs=[
+        {role:'system',content:SYSTEM},
+        ...chatHistory.slice(0,-1),
+        {role:'user',content:'PLAN MODE: Write a detailed numbered plan for this script. Cover: what features, what services, what globals, what GUI elements, what connections. No code yet.\n\nRequest: '+msg}
+      ];
+      const plan=await callAPI(planMsgs,500);
+      thinkBody.textContent=plan;
+      thinkLbl.textContent='⚙ Writing complete script...';
+      loadingText.textContent='Generating';
+
+      const writeMsgs=[
+        {role:'system',content:SYSTEM},
+        ...chatHistory.slice(0,-1),
+        {role:'assistant',content:'My detailed plan:\n'+plan},
+        {role:'user',content:'Now write the COMPLETE, FULL, PRODUCTION-QUALITY script following your plan exactly. Every section must be complete. No placeholders. No shortcuts. Minimum 150 lines for any real script. Request: '+msg}
+      ];
+      reply=await callAPI(writeMsgs,4096);
+      thinkLbl.textContent='⚙ Plan';
+      document.querySelectorAll('.tdot').forEach(d=>d.style.display='none');
+
+    } else {
+      loadingText.textContent='Thinking';
+      reply=await callAPI([{role:'system',content:SYSTEM},...chatHistory],600);
+    }
+
+    chatHistory.push({role:'assistant',content:reply});
+    if(chatHistory.length>40) chatHistory.shift();
+    loadingRow.classList.remove('show');
+    addAIReply(reply);
+    saveCurrentConv();
+
+  }catch(err){
+    thinkWrap.classList.remove('show'); loadingRow.classList.remove('show');
+    const b=document.createElement('div'); b.className='msg-block';
+    const t=document.createElement('div'); t.className='msg-text'; t.style.color='#ff5555';
+    t.textContent='Error: '+err.message; b.appendChild(t); outContent.appendChild(b); scrollBottom();
+  }
+  loading=false; updateBtn();
+}
+
+function updateBtn(){ sendBtn.className=(userInput.value.trim().length>0&&!loading)?'active':''; }
+
+userInput.oninput=()=>{ userInput.style.height='auto'; userInput.style.height=Math.min(userInput.scrollHeight,120)+'px'; updateBtn(); };
+userInput.onkeydown=e=>{ if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send();} };
+sendBtn.onclick=()=>send();
+document.querySelectorAll('.qbtn').forEach(btn=>{ btn.onclick=()=>{ if(!loading) send(btn.dataset.q); }; });
+copyBtn.onclick=()=>{ if(lastCode) copyText(lastCode,copyBtn); };
+clearBtn.onclick=()=>{
+  chatHistory=[]; lastCode='';
+  outContent.innerHTML='<div id="placeholder"><div id="ph-icon">⚡</div><div id="ph-text">Say hi or ask anything.<br>Describe your script and I\'ll build it.</div></div>';
+  thinkWrap.classList.remove('show');
+  document.querySelectorAll('.tdot').forEach(d=>d.style.display='');
+  const id=Date.now().toString();
+  conversations.unshift({id,title:'New conversation',messages:[],createdAt:Date.now(),updatedAt:Date.now()});
+  if(conversations.length>30) conversations=conversations.slice(0,30);
+  saveConvs(); currentConvId=id;
+};
+
+initConv();
+</script>
+</body>
+</html>
